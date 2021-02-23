@@ -26,7 +26,7 @@ class Plugin:
         self.enabled = True
 
     def init_parser(self, parser):
-        # TODO: 
+        # TODO:
         #   -- add a possibility to specify custom infer args
         #   -- add a possibility to specify an infer archive path
         #parser.add_argument("--infer", default=[], help="arg description")
@@ -53,7 +53,7 @@ class Plugin:
         props.post_build_chroot_cmds += [run_cmd]
 
         # the filter script tries to filter out false positives and transforms results into GCC compatible format
-        filter_cmd = "python2.7 %s only-tranform %s/report.json > %s" % (INFER_RESULTS_FILTER_SCRIPT, INFER_OUT_DIR, INFER_RESULTS)
+        filter_cmd = "python2.7 %s < %s/report.json > %s" % (INFER_RESULTS_FILTER_SCRIPT, INFER_OUT_DIR, INFER_RESULTS)
         props.post_build_chroot_cmds += [filter_cmd]
 
         props.copy_out_files += [INFER_INSTALL_LOG]
@@ -66,5 +66,5 @@ class Plugin:
             dst = "%s/infer-results.err" % results.dbgdir_uni
             cmd = CSGREP_CMD % (src, dst)
             return results.exec_cmd(cmd, shell=True, echo=True)
-        
+
         props.post_process_hooks += [filter_hook]

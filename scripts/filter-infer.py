@@ -3,11 +3,27 @@
 import json
 import sys
 
-resultsFile = open(sys.argv[2])
-results = json.load(resultsFile)
-resultsFile.close()
 
-# if sys.argv[1] == "only-tranform":
+def lowerSeverityForDEADSTORE(bug):
+    if bug["bug_type"] == "DEAD_STORE":
+        bug["severity"] = "WARNING"
 
-for r in results:
-    print("%s:%s:%s: %s: %s[Infer]: %s" % (r["file"], r["line"], r["column"], r["severity"].lower(), r["bug_type"], r["qualifier"]))
+
+def applyFilters(bugList, filterList):
+    for bug in bugList:
+        for filter in filterList:
+            filter(bug)
+
+
+def main():
+    bugList = json.load(sys.stdin)
+
+    if len(sys.argv) == 1 or sys.argv[1] != "--only-transform":
+        filterList = [lowerSeverityForDEADSTORE]
+        applyFilters(bugList, filterList)
+
+    for bug in bugList:
+        print("%s:%s:%s: %s: %s[Infer]: %s" % (bug["file"], bug["line"], bug["column"], bug["severity"].lower(), bug["bug_type"], bug["qualifier"]))
+
+if __name__ == "__main__":
+    main()

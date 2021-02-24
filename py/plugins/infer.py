@@ -27,10 +27,11 @@ class Plugin:
 
     def init_parser(self, parser):
         # TODO:
-        #   -- add a possibility to specify custom infer args
         #   -- add a possibility to specify an infer archive path
-        #parser.add_argument("--infer", default=[], help="arg description")
-        pass
+        parser.add_argument(
+            "--infer-analyze-add-flag", action="append", default=["--bufferoverrun", "--pulse"],
+            help="append the given flag (except '-o') when invoking infer analyze \
+(can be used multiple times)(default '--bufferoverrun', '--pulse')")
 
     def handle_args(self, parser, args, props):
         if not self.enabled:
@@ -49,7 +50,8 @@ class Plugin:
         props.pre_build_chroot_cmds += [install_cmd]
 
         # run an analysis phase of infer
-        run_cmd = "infer analyze --bufferoverrun --pulse -o %s > %s 2>&1" % (INFER_OUT_DIR, INFER_ANALYZE_LOG)
+        infer_analyze_flags = csmock.common.cflags.serialize_flags(args.infer_analyze_add_flag, separator=" ")
+        run_cmd = "infer analyze %s -o %s > %s 2>&1" % (infer_analyze_flags, INFER_OUT_DIR, INFER_ANALYZE_LOG)
         props.post_build_chroot_cmds += [run_cmd]
 
         # the filter script tries to filter out false positives and transforms results into GCC compatible format

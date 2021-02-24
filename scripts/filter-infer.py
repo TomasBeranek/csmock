@@ -18,7 +18,7 @@ def inferboFilter(bug):
 
     if bug["bug_type"] in bufferOverRunTypes:
         size = re.findall(r"Size: \[[^\[\]\n]*\]", bug["qualifier"])[0]
-        if ("+oo" in size) or ("-oo" in size):
+        if size and (("+oo" in size) or ("-oo" in size)):
             return True
 
 
@@ -34,13 +34,18 @@ def applyFilters(bugList, filterList):
         bug = bugList.pop(0)
         bugIsFalseAlarm = False
         for filter in filterList:
-            # if a filter returns true, then this bug is considered a
-            # false alarm will not be included in the final report
-            # NOTE: a bug marked as a false alarm may not actually be
-            #       a false alarm
-            if filter(bug):
-                bugIsFalseAlarm = True
-                break
+            try:
+                # if a filter returns true, then this bug is considered a
+                # false alarm will not be included in the final report
+                # NOTE: a bug marked as a false alarm may not actually be
+                #       a false alarm
+                if filter(bug):
+                    bugIsFalseAlarm = True
+                    break
+            except:
+                # if a filter fails on a bug, then the filter behaves as if
+                # the bug was real
+                bugIsFalseAlarm = False
         if not bugIsFalseAlarm:
             modifiedBugList.append(bug)
 

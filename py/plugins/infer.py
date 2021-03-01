@@ -43,9 +43,9 @@ class Plugin:
         if not self.enabled:
             return
 
-        # python2.7 -- for the infer reporting module
+        # python -- for the infer reporting module
         # ncurses-compat-libs -- libtinfo.so.5
-        props.install_pkgs += ["python2.7", "ncurses-compat-libs"]
+        props.install_pkgs += ["python", "ncurses-compat-libs"]
 
         infer_archive = ""
 
@@ -79,7 +79,7 @@ class Plugin:
         props.post_build_chroot_cmds += [run_cmd]
 
         # the filter script tries to filter out false positives and transforms results into GCC compatible format
-        filter_cmd = "python2.7 %s < %s/report.json > %s" % (INFER_RESULTS_FILTER_SCRIPT, INFER_OUT_DIR, INFER_RESULTS)
+        filter_cmd = "python %s < %s/report.json > %s" % (INFER_RESULTS_FILTER_SCRIPT, INFER_OUT_DIR, INFER_RESULTS)
         props.post_build_chroot_cmds += [filter_cmd]
 
         props.copy_out_files += [INFER_INSTALL_LOG]

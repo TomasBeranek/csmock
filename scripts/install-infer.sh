@@ -34,18 +34,49 @@ infer capture --reactive -o ${infer_dir} --force-integration' "$2" '-- ${compile
 # a return code should be carried back to a caller
 ${compiler_original} ${all_options}' >> /usr/bin/$1
 
-chmod +x /usr/bin/$1
+if ! chmod +x /usr/bin/$1
+then
+    echo "ERROR: Failed to add +x permission to /usr/bin/$1"
+    exit 1
+fi
 }
 
 
 log_file="/builddir/infer-capture-log"
 
 # install Infer
-cd /opt
-tar -xf infer*.tar.xz -C /opt
-rm infer*.tar.xz
-INFER_DIR=$(ls /opt | grep infer)
-ln -s /opt/${INFER_DIR}/bin/infer /usr/bin/infer
+if ! cd /opt
+then
+    echo "ERROR: Failed to open /opt directory"
+    exit 1
+fi
+
+if ! tar -xf $1 -C /opt
+then
+    echo "ERROR: Failed to extract an Infer archive $1"
+    exit 1
+fi
+
+INFER_DIR=$(ls /opt | grep infer-linux | head -n 1)
+
+if ! rm $1
+then
+    echo "ERROR: Failed to delete an Infer archive $1"
+    exit 1
+fi
+
+if ! ln -s /opt/${INFER_DIR}/bin/infer /usr/bin/infer
+then
+    echo "ERROR: Failed to create a symlink to /opt/${INFER_DIR}/bin/infer"
+    exit 1
+fi
+
+# test if the symlink works
+if ! infer --version
+then
+    echo "ERROR: Failed to run a symlink to /opt/${INFER_DIR}/bin/infer"
+    exit 1
+fi
 
 # create wrappers for compilers, this script is executed after all the dependencies are installed,
 # so all the necessary compilers should be already installed
@@ -103,4 +134,8 @@ do
         fi
 done
 
-chmod a+rw ${log_file}
+if ! chmod a+rw ${log_file}
+then
+    echo "ERROR: Failed to add +rw permission to ${log_file}"
+    exit 1
+fi

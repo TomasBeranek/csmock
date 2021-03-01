@@ -47,7 +47,7 @@ rm infer*.tar.xz
 INFER_DIR=$(ls /opt | grep infer)
 ln -s /opt/${INFER_DIR}/bin/infer /usr/bin/infer
 
-# create wrappers for compilers, this script is executed after all the dependencies are installed, 
+# create wrappers for compilers, this script is executed after all the dependencies are installed,
 # so all the necessary compilers should be already installed
 declare -a ccompilers=(	"ack"
 		      	"clang"
@@ -55,6 +55,7 @@ declare -a ccompilers=(	"ack"
 			"cproc"
 			"gcc"
 			"g++"
+            "c++"
 			"icc"
 			"icpc"
 			"lcc"
@@ -78,33 +79,28 @@ declare -a jcompilers=(	"javac")
 
 for c in "${ccompilers[@]}"
 do
-	if mv /usr/bin/${c} /usr/bin/${c}-original
+	if [ -f /usr/bin/${c}-original ] || mv /usr/bin/${c} /usr/bin/${c}-original
 	then
 		create_wrapper ${c} cc
                 echo -n `date +%H:%M:%S.%N` >> ${log_file}
                 echo " /usr/bin/${c} wrapper created successfully" >> ${log_file}
-
 	else
         	echo -n `date +%H:%M:%S.%N` >> ${log_file}
-		echo " /usr/bin/${c} compiler doesn't exist" >> ${log_file}
+		echo " /usr/bin/${c} C/C++ compiler doesn't exist or symlink is already installed" >> ${log_file}
 	fi
-
 done
 
 for c in "${jcompilers[@]}"
 do
-        if mv /usr/bin/${c} /usr/bin/${c}-original
+        if [ -f /usr/bin/${c}-original ] || mv /usr/bin/${c} /usr/bin/${c}-original
         then
                 create_wrapper ${c} javac
                 echo -n `date +%H:%M:%S.%N` >> ${log_file}
                 echo " /usr/bin/${c} wrapper created successfully" >> ${log_file}
-
         else
                 echo -n `date +%H:%M:%S.%N` >> ${log_file}
-                echo " /usr/bin/${c} compiler doesn't exist" >> ${log_file}
+                echo " /usr/bin/${c} Java compiler doesn't exist or symlink is already installed" >> ${log_file}
         fi
-
 done
 
 chmod a+rw ${log_file}
-

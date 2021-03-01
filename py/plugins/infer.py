@@ -47,7 +47,9 @@ class Plugin:
 
         # install infer and wrappers for a capture phase of infer
         install_cmd = "%s > %s 2>&1" % (INFER_INSTALL_SCRIPT, INFER_INSTALL_LOG)
-        props.pre_build_chroot_cmds += [install_cmd]
+        def install_infer_hook(results, mock):
+            return mock.exec_chroot_cmd(install_cmd)
+        props.post_depinst_hooks += [install_infer_hook]
 
         # run an analysis phase of infer
         infer_analyze_flags = csmock.common.cflags.serialize_flags(args.infer_analyze_add_flag, separator=" ")

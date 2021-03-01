@@ -343,7 +343,6 @@ class ScanProps:
         self.cswrap_filters = DEFAULT_CSWRAP_FILTERS
         self.result_filters = DEFAULT_RESULT_FILTERS
         self.build_cmd_wrappers = []
-        self.pre_build_chroot_cmds = []
         self.post_build_chroot_cmds = []
         self.post_process_hooks = []
         self.keep_going = False
@@ -990,10 +989,6 @@ cd %%s*/ || cd *\n\
                     rv = hook(results, mock)
                     if rv != 0:
                         results.error("post-depinst hook failed", ec=rv)
-
-                # execute pre-build commands in the chroot
-                for cmd in props.pre_build_chroot_cmds:
-                    mock.exec_chroot_cmd(cmd)
 
                 if not props.no_scan:
                     if props.shell_cmd_to_build is None:

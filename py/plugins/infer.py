@@ -39,6 +39,10 @@ class Plugin:
             "--infer-archive-path", default="",
             help="use given archive to install infer (default is /opt/infer-linux*.tar.xz)")
 
+        parser.add_argument(
+            "--no-infer-filter", action="store_true",
+            help="disable infer false positive filter (enabled by default)")
+
     def handle_args(self, parser, args, props):
         if not self.enabled:
             return
@@ -81,7 +85,10 @@ class Plugin:
         props.post_build_chroot_cmds += [run_cmd]
 
         # the filter script tries to filter out false positives and transforms results into GCC compatible format
-        filter_cmd = "python %s < %s/report.json > %s" % (INFER_RESULTS_FILTER_SCRIPT, INFER_OUT_DIR, INFER_RESULTS)
+        if args.no_infer_filter:
+            filter_cmd = "python %s --only-transform < %s/report.json > %s" % (INFER_RESULTS_FILTER_SCRIPT, INFER_OUT_DIR, INFER_RESULTS)
+        else:
+            filter_cmd = "python %s < %s/report.json > %s" % (INFER_RESULTS_FILTER_SCRIPT, INFER_OUT_DIR, INFER_RESULTS)
         props.post_build_chroot_cmds += [filter_cmd]
 
         props.copy_out_files += [INFER_INSTALL_LOG]

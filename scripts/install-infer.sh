@@ -15,6 +15,7 @@ ast_log_file="/builddir/infer-ast-log"
 all_options="$@"
 infer_dir="/builddir/infer-out"
 skip_capture=false
+lock_dir=/tmp/infer.lockdir
 
 if [[ $# -eq 1 && "$1" == *"@/tmp/"* ]] ;
 then
@@ -42,19 +43,31 @@ then
     set -- "$@" "$arg"
   done
 
-  # logging
-  echo -n `date +%H:%M:%S.%N` >> ${log_file}
-  echo " ${compiler} ${all_options}" >> ${log_file}
-  echo "" >> ${log_file}
-  echo "infer capture --reactive -o ${infer_dir} --force-integration' "$2" '-- ${compiler} $@" >> ${log_file}
-  echo "" >> ${log_file}
-  infer capture --reactive -o ${infer_dir} --force-integration' "$2" '-- ${compiler} $@ >> ${log_file} 2>&1
+  # locking
+  while :
+  do
+    if mkdir "${lock_dir}" > /dev/null 2>&1
+    then
+      # lock acquired
+      # logging
+      echo -n `date +%H:%M:%S.%N` >> ${log_file}
+      echo " ${compiler} ${all_options}" >> ${log_file}
+      echo "" >> ${log_file}
+      echo "infer capture --reactive -o ${infer_dir} --force-integration' "$2" '-- ${compiler} $@" >> ${log_file}
+      echo "" >> ${log_file}
+      infer capture --reactive -o ${infer_dir} --force-integration' "$2" '-- ${compiler} $@ >> ${log_file} 2>&1
 
-  # save the compile command and the list of freshly captured files from infer database
-  echo "${compiler} $@" >> ${ast_log_file}
-  echo ${PWD} >> ${ast_log_file}
-  sqlite3 /builddir/infer-out/results.db "SELECT source_file FROM source_files WHERE freshly_captured = 1" >> ${ast_log_file}
-  echo "" >> ${ast_log_file}
+      # save the compile command and the list of freshly captured files from infer database
+      echo "${compiler} $@" >> ${ast_log_file}
+      echo ${PWD} >> ${ast_log_file}
+      sqlite3 /builddir/infer-out/results.db "SELECT source_file FROM source_files WHERE freshly_captured = 1" >> ${ast_log_file}
+      echo "" >> ${ast_log_file}
+
+      # release lock
+      rm -rf ${lock_dir}
+      break
+    fi
+  done
 fi
 
 # a return code should be carried back to a caller

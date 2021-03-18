@@ -77,7 +77,7 @@ class Plugin:
 
         # run an analysis phase of infer
         infer_analyze_flags = csmock.common.cflags.serialize_flags(args.infer_analyze_add_flag, separator=" ")
-        run_cmd = "infer analyze %s -o %s > %s 2>&1" % (infer_analyze_flags, INFER_OUT_DIR, INFER_ANALYZE_LOG)
+        run_cmd = "infer analyze --keep-going %s -o %s > %s 2>&1" % (infer_analyze_flags, INFER_OUT_DIR, INFER_ANALYZE_LOG)
         props.post_build_chroot_cmds += [run_cmd]
 
         # the filter script tries to filter out false positives and transforms results into GCC compatible format

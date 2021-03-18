@@ -11,6 +11,7 @@ echo '#!/usr/bin/sh
 compiler="'"$1"'"
 compiler_original="${compiler}-original"
 log_file="/builddir/infer-capture-log"
+ast_log_file="/builddir/infer-ast-log"
 all_options="$@"
 infer_dir="/builddir/infer-out"
 
@@ -30,6 +31,12 @@ echo "" >> ${log_file}
 echo "infer capture --reactive -o ${infer_dir} --force-integration' "$2" '-- ${compiler} $@" >> ${log_file}
 echo "" >> ${log_file}
 infer capture --reactive -o ${infer_dir} --force-integration' "$2" '-- ${compiler} $@ >> ${log_file} 2>&1
+
+# save the compile command and the list of freshly captured files from infer database
+echo "${compiler} $@" >> ${ast_log_file}
+echo ${PWD} >> ${ast_log_file}
+sqlite3 /builddir/infer-out/results.db "SELECT source_file FROM source_files WHERE freshly_captured = 1" >> ${ast_log_file}
+echo "" >> ${ast_log_file}
 
 # a return code should be carried back to a caller
 ${compiler_original} ${all_options}' >> /usr/bin/$1

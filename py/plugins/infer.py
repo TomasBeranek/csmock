@@ -9,6 +9,8 @@ INFER_RESULTS = "/builddir/infer-results.txt"
 INFER_ANALYZE_LOG = "/builddir/infer-analyze-log"
 INFER_CAPTURE_LOG = "/builddir/infer-capture-log"
 INFER_OUT_DIR = "/builddir/infer-out"
+INFER_AST_DIR = "/builddir/infer-ast"
+INFER_AST_LOG = "/builddir/infer-ast-log"
 CSGREP_CMD = "csgrep --quiet %s > %s"
 
 class PluginProps:
@@ -28,8 +30,6 @@ class Plugin:
         self.enabled = True
 
     def init_parser(self, parser):
-        # TODO:
-        #   -- add a possibility to specify an infer archive path
         parser.add_argument(
             "--infer-analyze-add-flag", action="append", default=["--bufferoverrun", "--pulse"],
             help="append the given flag (except '-o') when invoking infer analyze \
@@ -45,7 +45,9 @@ class Plugin:
 
         # python -- for the infer reporting module
         # ncurses-compat-libs -- libtinfo.so.5
-        props.install_pkgs += ["python", "ncurses-compat-libs"]
+        # sqlite -- sqlite3 command for SQL query on infer database
+        # clang -- for generating an abstract syntax tree used in infer-filter.py
+        props.install_pkgs += ["python", "ncurses-compat-libs", "sqlite", "clang"]
 
         infer_archive = ""
 
@@ -85,6 +87,8 @@ class Plugin:
         props.copy_out_files += [INFER_INSTALL_LOG]
         props.copy_out_files += [INFER_CAPTURE_LOG]
         props.copy_out_files += [INFER_ANALYZE_LOG]
+        props.copy_out_files += [INFER_AST_LOG]
+        props.copy_out_files += [INFER_AST_DIR]
         props.copy_out_files += [INFER_RESULTS]
 
         def filter_hook(results):

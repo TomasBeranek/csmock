@@ -14,30 +14,48 @@ log_file="/builddir/infer-capture-log"
 ast_log_file="/builddir/infer-ast-log"
 all_options="$@"
 infer_dir="/builddir/infer-out"
+skip_capture=false
 
-# delete incompatible options
-for arg do
-  shift
-  [ "$arg" = "-fstack-clash-protection" ] && continue
-  [ "$arg" = "-flto=auto" ] && continue
-  [ "$arg" = "-flto=jobserver" ] && continue
-  [ "$arg" = "-ffat-lto-objects" ] && continue
-  set -- "$@" "$arg"
+if [[ $# -eq 1 && "$1" == *"@/tmp/"* ]] ;
+then
+  skip_capture=true
+  set -- "/usr/bin/${compiler_original}"
+fi
+
+for var in "$@"
+do
+    if [[ "$var" =~ conftest[0-9]*\.c$ ]] ;
+    then
+      skip_capture=true
+    fi
 done
 
-# logging
-echo -n `date +%H:%M:%S.%N` >> ${log_file}
-echo " ${compiler} ${all_options}" >> ${log_file}
-echo "" >> ${log_file}
-echo "infer capture --reactive -o ${infer_dir} --force-integration' "$2" '-- ${compiler} $@" >> ${log_file}
-echo "" >> ${log_file}
-infer capture --reactive -o ${infer_dir} --force-integration' "$2" '-- ${compiler} $@ >> ${log_file} 2>&1
+if [ "${skip_capture}" = false ]
+then
+  # delete incompatible options
+  for arg do
+    shift
+    [ "$arg" = "-fstack-clash-protection" ] && continue
+    [ "$arg" = "-flto=auto" ] && continue
+    [ "$arg" = "-flto=jobserver" ] && continue
+    [ "$arg" = "-ffat-lto-objects" ] && continue
+    set -- "$@" "$arg"
+  done
 
-# save the compile command and the list of freshly captured files from infer database
-echo "${compiler} $@" >> ${ast_log_file}
-echo ${PWD} >> ${ast_log_file}
-sqlite3 /builddir/infer-out/results.db "SELECT source_file FROM source_files WHERE freshly_captured = 1" >> ${ast_log_file}
-echo "" >> ${ast_log_file}
+  # logging
+  echo -n `date +%H:%M:%S.%N` >> ${log_file}
+  echo " ${compiler} ${all_options}" >> ${log_file}
+  echo "" >> ${log_file}
+  echo "infer capture --reactive -o ${infer_dir} --force-integration' "$2" '-- ${compiler} $@" >> ${log_file}
+  echo "" >> ${log_file}
+  infer capture --reactive -o ${infer_dir} --force-integration' "$2" '-- ${compiler} $@ >> ${log_file} 2>&1
+
+  # save the compile command and the list of freshly captured files from infer database
+  echo "${compiler} $@" >> ${ast_log_file}
+  echo ${PWD} >> ${ast_log_file}
+  sqlite3 /builddir/infer-out/results.db "SELECT source_file FROM source_files WHERE freshly_captured = 1" >> ${ast_log_file}
+  echo "" >> ${ast_log_file}
+fi
 
 # a return code should be carried back to a caller
 ${compiler_original} ${all_options}' >> /usr/bin/$1

@@ -1,4 +1,4 @@
-#!/usr/bin/sh
+#!/bin/bash
 
 # param 1 -- name of a compiler
 # param 2 -- type of a compiler for infer option --force-integration
@@ -6,7 +6,7 @@
 #		-- 'javac' for Java
 create_wrapper()
 {
-echo '#!/usr/bin/sh
+echo '#!/bin/bash
 
 compiler="'"$1"'"
 compiler_original="${compiler}-original"
@@ -18,10 +18,11 @@ infer_dir="/builddir/infer-out"
 # delete incompatible options
 for arg do
   shift
-  case $arg in
-    -fstack-clash-protection) : ;;
-       (*) set -- "$@" "$arg" ;;
-  esac
+  [ "$arg" = "-fstack-clash-protection" ] && continue
+  [ "$arg" = "-flto=auto" ] && continue
+  [ "$arg" = "-flto=jobserver" ] && continue
+  [ "$arg" = "-ffat-lto-objects" ] && continue
+  set -- "$@" "$arg"
 done
 
 # logging

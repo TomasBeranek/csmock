@@ -39,6 +39,13 @@ then
     [ "$arg" = "-flto=auto" ] && continue
     [ "$arg" = "-flto=jobserver" ] && continue
     [ "$arg" = "-ffat-lto-objects" ] && continue
+    [[ "$arg" =~ "-flto-jobs=[0-9]*" ]] && continue
+    [ "$arg" = "-flto=thin" ] && continue
+    [ "$arg" = "-flto=full" ] && continue
+    [ "$arg" = "-fsplit-lto-unit" ] && continue
+    [ "$arg" = "-fvirtual-function-elimination" ] && continue
+    [ "$arg" = "-flto=full" ] && continue
+    [ "$arg" = "-fwhole-program-vtables" ] && continue
     set -- "$@" "$arg"
   done
 

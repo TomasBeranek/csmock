@@ -4,10 +4,7 @@ import os
 
 INFER_RESULTS_FILTER_SCRIPT = "/usr/share/csmock/scripts/filter-infer.py"
 INFER_INSTALL_SCRIPT = "/usr/share/csmock/scripts/install-infer.sh"
-INFER_INSTALL_LOG = "/builddir/infer-install-log"
 INFER_RESULTS = "/builddir/infer-results.txt"
-INFER_ANALYZE_LOG = "/builddir/infer-analyze-log"
-INFER_CAPTURE_LOG = "/builddir/infer-capture-log"
 INFER_OUT_DIR = "/builddir/infer-out"
 INFER_AST_DIR = "/builddir/infer-ast"
 INFER_AST_LOG = "/builddir/infer-ast-log"
@@ -74,14 +71,15 @@ class Plugin:
         props.copy_in_files += [INFER_RESULTS_FILTER_SCRIPT]
 
         # install infer and wrappers for a capture phase of infer
-        install_cmd = "%s %s > %s 2>&1" % (INFER_INSTALL_SCRIPT, infer_archive, INFER_INSTALL_LOG)
+        install_cmd = "%s %s" % (INFER_INSTALL_SCRIPT, infer_archive)
         def install_infer_hook(results, mock):
             return mock.exec_chroot_cmd(install_cmd)
         props.post_depinst_hooks += [install_infer_hook]
 
         # run an analysis phase of infer
         infer_analyze_flags = csmock.common.cflags.serialize_flags(args.infer_analyze_add_flag, separator=" ")
-        run_cmd = "infer analyze --keep-going %s -o %s > %s 2>&1" % (infer_analyze_flags, INFER_OUT_DIR, INFER_ANALYZE_LOG)
+        run_cmd = "echo 'NOTE: INFER: running analysis phase' && "
+        run_cmd += "infer analyze --keep-going %s -o %s" % (infer_analyze_flags, INFER_OUT_DIR)
         props.post_build_chroot_cmds += [run_cmd]
 
         # the filter script tries to filter out false positives and transforms results into GCC compatible format
@@ -91,9 +89,6 @@ class Plugin:
             filter_cmd = "python %s < %s/report.json > %s" % (INFER_RESULTS_FILTER_SCRIPT, INFER_OUT_DIR, INFER_RESULTS)
         props.post_build_chroot_cmds += [filter_cmd]
 
-        props.copy_out_files += [INFER_INSTALL_LOG]
-        props.copy_out_files += [INFER_CAPTURE_LOG]
-        props.copy_out_files += [INFER_ANALYZE_LOG]
         props.copy_out_files += [INFER_AST_LOG]
         props.copy_out_files += [INFER_AST_DIR]
         props.copy_out_files += [INFER_RESULTS]

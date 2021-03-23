@@ -108,6 +108,7 @@ def memoryLeaksFilter(bug):
                         for sourceFile in freshlyCapturedFiles:
                             with open("%s/%s" % (AST_FILES_DIR, sourceFile), "w") as astFile:
                                 astFile.write("")
+                            print("WARNING: INFER: filter-infer.py: failed generate AST for file " + sourceFile, file=sys.stderr)
                         continue
 
             # copy generated ast for every source file for easier access

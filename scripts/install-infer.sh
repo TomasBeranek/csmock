@@ -50,8 +50,13 @@ then
       # lock acquired
       # logging
       >&2 echo ""
-      >&2 echo "NOTE: INFER: ${compiler}-wrapper: running capture phase \"infer capture --reactive -o ${infer_dir} --force-integration' "$2" '-- ${compiler} $@\""
-      >&2 infer capture --reactive -o ${infer_dir} --force-integration' "$2" '-- ${compiler} $@
+      >&2 echo "NOTE: INFER: ${compiler}-wrapper: running capture phase"
+      if infer capture --reactive -o ${infer_dir} --force-integration' "$2" '-- ${compiler} $@ 1>&2
+      then
+        >&2 echo "NOTE: INFER: ${compiler}-wrapper: successfully captured: \"${compiler} $@\""
+      else
+        >&2 echo "WARNING: INFER: ${compiler}-wrapper: unsuccessfully captured: \"${compiler} $@\""
+      fi
       >&2 echo ""
 
       # save the compile command and the list of freshly captured files from infer database
@@ -110,6 +115,8 @@ if ! infer --version > /dev/null 2>&1
 then
   echo "ERROR: INFER: install-infer.sh: Failed to run 'infer --version' to test a symlink to /opt/${INFER_DIR}/bin/infer"
   exit 1
+else
+  echo "NOTE: INFER: install-infer.sh: Infer installed successfully"
 fi
 
 # create wrappers for compilers, this script is executed after all the dependencies are installed,

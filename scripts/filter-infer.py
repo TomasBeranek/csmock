@@ -92,7 +92,7 @@ def memoryLeaksFilter(bug):
                 if "FunctionDecl" not in result.stdout:
                     # deleting '-c' didnt help or wasnt present in the command, try the last aproach
                     # keep only -Dmacro args and ignore everything else
-                    compileCommand = [arg for arg in compileCommand if arg[0:2] == "-D"]
+                    compileCommand = [arg for arg in compileCommand if arg[0:2] == "-D" or arg[0:2] == "-I"]
                     compileCommand = ["clang", "-cc1", "-ast-dump"] + compileCommand
 
                     # TODO: freshlyCapturedFiles are only names of files, but in compile command
@@ -154,8 +154,16 @@ def main():
             memoryLeaksFilter]
         bugList = applyFilters(bugList, filterList)
 
+    firstBug = True
+
     for bug in bugList:
-        print("%s:%s:%s: %s: %s[Infer]: %s" % (bug["file"], bug["line"], bug["column"], bug["severity"].lower(), bug["bug_type"], bug["qualifier"]))
+        if not firstBug:
+            print()
+        print("Error: INFER_WARNING:")
+        for bugTrace in bug["bug_trace"]:
+            print("%s:%s:%s: note: %s" % (bugTrace["filename"], bugTrace["line_number"], bugTrace["column_number"], bugTrace["description"]))
+        print("%s:%s:%s: %s[%s]: %s" % (bug["file"], bug["line"], bug["column"], bug["severity"].lower(), bug["bug_type"], bug["qualifier"]))
+        firstBug=False
 
 if __name__ == "__main__":
     main()

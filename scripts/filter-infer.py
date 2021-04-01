@@ -8,6 +8,12 @@ import subprocess
 from pathlib import Path
 
 
+def nullDereferenceFilter(bug):
+    for bugTrace in bug["bug_trace"]:
+        if re.match("Skipping .*\(\): empty list of specs", bugTrace["description"]):
+            return True
+
+
 def inferboFilter(bug):
     if bug["bug_type"] == ["BUFFER_OVERRUN_U5"]:
         return True
@@ -151,7 +157,8 @@ def main():
         filterList = [
             lowerSeverityForDEADSTORE,
             inferboFilter,
-            memoryLeaksFilter]
+            memoryLeaksFilter,
+            nullDereferenceFilter]
         bugList = applyFilters(bugList, filterList)
 
     firstBug = True

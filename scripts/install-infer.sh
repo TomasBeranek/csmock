@@ -111,8 +111,10 @@ then
   exit 1
 fi
 
-if ! ln -s /opt/${INFER_DIR}/bin/infer /usr/bin/infer
+if [ -f /usr/bin/infer ] || ln -s /opt/${INFER_DIR}/bin/infer /usr/bin/infer
 then
+  : # success
+else
   echo "ERROR: INFER: install-infer.sh: Failed to create a symlink to /opt/${INFER_DIR}/bin/infer"
   exit 1
 fi

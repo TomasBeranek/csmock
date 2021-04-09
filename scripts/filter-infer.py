@@ -10,12 +10,12 @@ from pathlib import Path
 
 def nullDereferenceFilter(bug):
     for bugTrace in bug["bug_trace"]:
-        if re.match("Skipping .*\(\): empty list of specs", bugTrace["description"]):
+        if re.match("Skipping .*\(\):", bugTrace["description"]):
             return True
 
 
 def inferboFilter(bug):
-    if bug["bug_type"] == ["BUFFER_OVERRUN_U5"]:
+    if bug["bug_type"] == ["BUFFER_OVERRUN_U5"] or bug["bug_type"] == ["INTEGER_OVERFLOW_U5"]:
         return True
 
     bufferOverRunTypes = [
@@ -23,11 +23,17 @@ def inferboFilter(bug):
         "BUFFER_OVERRUN_L3",
         "BUFFER_OVERRUN_L4",
         "BUFFER_OVERRUN_L5",
-        "BUFFER_OVERRUN_S2"]
+        "BUFFER_OVERRUN_S2",
+        "INFERBO_ALLOC_MAY_BE_NEGATIVE",
+        "INFERBO_ALLOC_MAY_BE_BIG"]
 
-    if bug["bug_type"] in bufferOverRunTypes:
-        size = re.findall(r"Size: \[[^\[\]\n]*\]", bug["qualifier"])[0]
-        if size and (("+oo" in size) or ("-oo" in size)):
+    integerOverFlowTypes = [
+        "INTEGER_OVERFLOW_L1",
+        "INTEGER_OVERFLOW_L2",
+        "INTEGER_OVERFLOW_L5"]
+
+    if bug["bug_type"] in bufferOverRunTypes or bug["bug_type"] in integerOverFlowTypes:
+        if ("+oo" in bug["qualifier"]) or ("-oo" in bug["qualifier"]):
             return True
 
 

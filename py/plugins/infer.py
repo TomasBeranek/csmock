@@ -82,7 +82,7 @@ class Plugin:
         run_cmd += "infer analyze --keep-going %s -o %s" % (infer_analyze_flags, INFER_OUT_DIR)
         props.post_build_chroot_cmds += [run_cmd]
 
-        # the filter script tries to filter out false positives and transforms results into GCC compatible format
+        # the filter script tries to filter out false positives and transforms results into csdiff compatible format
         if args.no_infer_filter:
             filter_cmd = "python %s --only-transform < %s/report.json > %s" % (INFER_RESULTS_FILTER_SCRIPT, INFER_OUT_DIR, INFER_RESULTS)
         else:

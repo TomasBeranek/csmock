@@ -311,15 +311,26 @@ def applyFilters(bugList, filterList):
 def main():
     bugList = json.load(sys.stdin)
 
-    if len(sys.argv) == 1 or sys.argv[1] != "--only-transform":
-        filterList = [
-            lowerSeverityForDEADSTORE,
-            inferboFilter,
-            memoryLeaksFilter,
-            biabductionFilter,
-            uninitFilter,
-            memoryLeaksFilter]
+    if "--only-transform" not in sys.argv:
+        filterList = []
+
+        if "--no-biadbuction" not in sys.argv:
+            filterList += [biabductionFilter]
+
+        if "--no-inferbo" not in sys.argv:
+            filterList += [inferboFilter]
+
+        if "--no-uninit" not in sys.argv:
+            filterList += [uninitFilter]
+
+        if "--no-memory-leak" not in sys.argv:
+            filterList += [memoryLeaksFilter]
+
+        if "--no-dead-store" not in sys.argv:
+            filterList += [lowerSeverityForDEADSTORE]
+
         bugList = applyFilters(bugList, filterList)
+
 
     firstBug = True
 

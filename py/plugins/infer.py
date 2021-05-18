@@ -34,11 +34,32 @@ class Plugin:
 
         parser.add_argument(
             "--infer-archive-path", default="",
-            help="use given archive to install infer (default is /opt/infer-linux*.tar.xz)")
+            help="use given archive to install Infer (default is /opt/infer-linux*.tar.xz)")
 
         parser.add_argument(
             "--no-infer-filter", action="store_true",
-            help="disable infer false positive filter (enabled by default)")
+            help="disable Infer false positive filter (enabled by default)")
+
+        parser.add_argument(
+            "--no-infer-biabduction-filter", action="store_true",
+            help="disable Infer Bi-abduction filter (enabled by default)")
+
+        parser.add_argument(
+            "--no-infer-inferbo-filter", action="store_true",
+            help="disable Infer InferBO filter (enabled by default)")
+
+        parser.add_argument(
+            "--no-infer-uninit-filter", action="store_true",
+            help="disable Infer Uninit filter (enabled by default)")
+
+        parser.add_argument(
+            "--no-infer-memory-leak-filter", action="store_true",
+            help="disable Infer memory leak filter (enabled by default)")
+
+        parser.add_argument(
+            "--no-infer-dead-store-filter", action="store_true",
+            help="disable Infer dead store filter (enabled by default)")
+
 
     def handle_args(self, parser, args, props):
         if not self.enabled:
@@ -82,11 +103,32 @@ class Plugin:
         run_cmd += "infer analyze --keep-going %s -o %s" % (infer_analyze_flags, INFER_OUT_DIR)
         props.post_build_chroot_cmds += [run_cmd]
 
-        # the filter script tries to filter out false positives and transforms results into csdiff compatible format
+        filter_args = []
+
         if args.no_infer_filter:
-            filter_cmd = "python %s --only-transform < %s/report.json > %s" % (INFER_RESULTS_FILTER_SCRIPT, INFER_OUT_DIR, INFER_RESULTS)
-        else:
-            filter_cmd = "python %s < %s/report.json > %s" % (INFER_RESULTS_FILTER_SCRIPT, INFER_OUT_DIR, INFER_RESULTS)
+            filter_args += ["--only-transform"]
+
+        if args.no_infer_biabduction_filter:
+            filter_args += ["--no-biadbuction"]
+
+        if args.no_infer_inferbo_filter:
+            filter_args += ["--no-inferbo"]
+
+        if args.no_infer_uninit_filter:
+            filter_args += ["--no-uninit"]
+
+        if args.no_infer_memory_leak_filter:
+            filter_args += ["--no-memory-leak"]
+
+        if args.no_infer_dead_store_filter:
+            filter_args += ["--no-dead-store"]
+
+
+        filter_args_serialized = csmock.common.cflags.serialize_flags(filter_args, separator=" ")
+
+        # the filter script tries to filter out false positives and transforms results into csdiff compatible format
+        filter_cmd = "python %s %s < %s/report.json > %s" % (INFER_RESULTS_FILTER_SCRIPT, filter_args_serialized, INFER_OUT_DIR, INFER_RESULTS)
+
         props.post_build_chroot_cmds += [filter_cmd]
 
         props.copy_out_files += [INFER_AST_LOG]

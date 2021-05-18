@@ -51,6 +51,146 @@ def lowerSeverityForDEADSTORE(bug):
         bug["severity"] = "WARNING"
 
 
+def getFunctionAST(file, functionName):
+    with open(file) as f:
+        lines = f.read().splitlines()
+
+    startfunctionIndex = -1
+    endfunctionIndex = len(lines) - 1 # implicit end
+    for lineIndex in range(len(lines)):
+        if startfunctionIndex == -1 and re.match(r'\|\-FunctionDecl .* ' + functionName + r' ', lines[lineIndex]):
+            startfunctionIndex = lineIndex
+            continue # skip this to line, so it wont match with end
+        if startfunctionIndex != -1 and lines[lineIndex][0:2] == "|-":
+            endfunctionIndex = lineIndex - 1 # current line is FunctionDecl of next function
+            break
+    return lines[startfunctionIndex:endfunctionIndex+1]
+
+
+def getLineDepth(line):
+    depth = 0
+    for c in line:
+        if c in "| `-":
+            depth += 1
+        else:
+            break
+    # -2 is because there is always a leading '|' and before
+    # node a '-' and we want a function declaration to have 0 depth
+    return depth - 2
+
+
+def getCommandAST(functionAST, lineNumber):
+    lineRe = "<line:" + str(lineNumber)
+    commandAST = []
+    currDepth = -1
+
+    for line in functionAST:
+        # detection of the allocation command (it might be encapsulated e.g. in IfStmt)
+        if (not commandAST) and (lineRe in line):
+            currDepth = getLineDepth(line)
+            commandAST.append(line)
+            continue
+        if currDepth == -1:
+            continue
+        elif getLineDepth(line) > currDepth:
+            commandAST.append(line)
+        else:
+            break
+
+    return commandAST
+
+
+def getBinaryOperatorAST(commandAST, col):
+        binaryOperatorAST = []
+        currDepth = -1
+
+        for line in commandAST:
+            if (not binaryOperatorAST) and ("BinaryOperator" in line):
+                currDepth = getLineDepth(line)
+                binaryOperatorAST.append(line)
+                continue
+            if currDepth == -1:
+                continue
+            elif getLineDepth(line) > currDepth:
+                binaryOperatorAST.append(line)
+            else:
+                # we have a loaded BinaryOperator node and we have to check if there is a rvalue
+                # that starts on a col (if we have the right BinaryOperator node)
+                for line in binaryOperatorAST:
+                    if ("<col:"+str(col)) in line:
+                        # we have found the right one
+                        return binaryOperatorAST
+                # this binary operation was not the right one
+                binaryOperatorAST = []
+
+        # if BinaryOperator ended with commandAST, its still possible, that we found
+        # the right one
+        for line in binaryOperatorAST:
+            if ("<col:"+str(col)) in line:
+                # we have found the right one
+                return binaryOperatorAST
+
+        # if the right node wasnt found return None -> this will throw an exception
+        # in a caller and this bug will be considered as a false positive
+
+
+def getVariableName(functionAST, callLine, callCol):
+    commandAST = getCommandAST(functionAST, callLine)
+    binaryOperatorAST = getBinaryOperatorAST(commandAST, callCol)
+
+    if binaryOperatorAST:
+        for line in binaryOperatorAST:
+            if "lvalue" in line:
+                # extract variable name from AST line
+                # example:
+                # |       | |-DeclRefExpr 0x1c75b68 <col:4> 'char *' lvalue Var 0x1c6ce08 'p' 'char *'
+                return line.split("lvalue")[1].split("'")[1]
+
+    # if an allocated memory was assigned while declaring the variable, in AST it isnt
+    # called a BinaryOperator, so we have to check a VarDecl node instead
+    for line in commandAST:
+        if "-VarDecl" in line:
+            # extract variable name from AST line
+            # example:
+            # |   | `-VarDecl 0x149b410 <col:3, col:21> col:8 used c 'char *' cinit
+            return line.split("used")[1].split(" ")[1]
+
+
+def checkMemoryLeakAgainstAST(bug, fileAST):
+    functionName = bug["procedure"]
+    functionAST = getFunctionAST(fileAST, functionName)
+    # get the name of the variable in which allocated memory is stored, the function
+    # needs AST and (line, column) in which starts a trace (where an allocation is done by
+    # calling malloc, calloc, ... or any other function which returns an allocated memory)
+    variableName = getVariableName(functionAST, bug["bug_trace"][1]["line_number"], bug["bug_trace"][1]["column_number"])
+
+    # check if the varibale is used as a lvalue after its last use
+    lastUseLine = bug["bug_trace"][-1]["line_number"]
+    afterLastUse = False
+    lineIndex = 0
+    lvalueFound = False
+
+    while lineIndex < len(functionAST):
+        if ("<line:"+str(lastUseLine)) in functionAST[lineIndex]:
+            afterLastUse = True
+            # skip the rest of the command AST on the lastUseLine
+            lastUseCommandStartDepth = getLineDepth(functionAST[lineIndex])
+            lineIndex += 1
+
+            while getLineDepth(functionAST[lineIndex]) > lastUseCommandStartDepth:
+                lineIndex += 1
+            continue
+
+        if afterLastUse and re.search('lvalue .* \'' + variableName + '\' ', functionAST[lineIndex]):
+            lvalueFound = True
+        lineIndex += 1
+
+    if lvalueFound:
+        return False
+    else:
+        return True
+
+
 def memoryLeaksFilter(bug):
     if bug["bug_type"] != "MEMORY_LEAK":
         return
@@ -139,6 +279,9 @@ def memoryLeaksFilter(bug):
                     # stdout is captured as bytes and needs to be converted
                     astFile.write(result.stdout)
 
+    # checks the bug against the generated AST
+    return checkMemoryLeakAgainstAST(bug, "%s/%s" % (AST_FILES_DIR, sourceFile))
+
 
 def applyFilters(bugList, filterList):
     modifiedBugList = []
@@ -174,7 +317,8 @@ def main():
             inferboFilter,
             memoryLeaksFilter,
             biabductionFilter,
-            uninitFilter]
+            uninitFilter,
+            memoryLeaksFilter]
         bugList = applyFilters(bugList, filterList)
 
     firstBug = True

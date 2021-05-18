@@ -8,14 +8,23 @@ import subprocess
 from pathlib import Path
 
 
-def nullDereferenceFilter(bug):
-    for bugTrace in bug["bug_trace"]:
-        if re.match("Skipping .*\(\):", bugTrace["description"]):
+def uninitFilter(bug):
+    if bug["bug_type"] == "UNINITIALIZED_VALUE":
+        if re.match("The value read from .*\[_\] was never initialized.", bug["qualifier"]):
             return True
 
 
+def biabductionFilter(bug):
+    if bug["bug_type"] == "NULL_DEREFERENCE" or bug["bug_type"] == "RESOURCE_LEAK":
+        for bugTrace in bug["bug_trace"]:
+            if re.match("Skipping .*\(\):", bugTrace["description"]):
+                return True
+            if re.match("Switch condition is false. Skipping switch case", bugTrace["description"]):
+                return True
+
+
 def inferboFilter(bug):
-    if bug["bug_type"] == ["BUFFER_OVERRUN_U5"] or bug["bug_type"] == ["INTEGER_OVERFLOW_U5"]:
+    if bug["bug_type"] == "BUFFER_OVERRUN_U5" or bug["bug_type"] == "INTEGER_OVERFLOW_U5":
         return True
 
     bufferOverRunTypes = [
@@ -28,9 +37,9 @@ def inferboFilter(bug):
         "INFERBO_ALLOC_MAY_BE_BIG"]
 
     integerOverFlowTypes = [
-        "INTEGER_OVERFLOW_L1",
         "INTEGER_OVERFLOW_L2",
-        "INTEGER_OVERFLOW_L5"]
+        "INTEGER_OVERFLOW_L5",
+        "INTEGER_OVERFLOW_U5"]
 
     if bug["bug_type"] in bufferOverRunTypes or bug["bug_type"] in integerOverFlowTypes:
         if ("+oo" in bug["qualifier"]) or ("-oo" in bug["qualifier"]):
@@ -103,7 +112,7 @@ def memoryLeaksFilter(bug):
                     result = subprocess.run(compileCommand, capture_output=True, text=True, encoding="utf-8", cwd=PWD)
                 if "FunctionDecl" not in result.stdout:
                     # deleting '-c' didnt help or wasnt present in the command, try the last aproach
-                    # keep only -Dmacro args and ignore everything else
+                    # keep only -Dmacro and -Ilib args and ignore everything else
                     compileCommand = [arg for arg in compileCommand if arg[0:2] == "-D" or arg[0:2] == "-I"]
                     compileCommand = ["clang", "-cc1", "-ast-dump"] + compileCommand
 
@@ -164,7 +173,8 @@ def main():
             lowerSeverityForDEADSTORE,
             inferboFilter,
             memoryLeaksFilter,
-            nullDereferenceFilter]
+            biabductionFilter,
+            uninitFilter]
         bugList = applyFilters(bugList, filterList)
 
     firstBug = True
